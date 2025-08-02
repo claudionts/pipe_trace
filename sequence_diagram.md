@@ -1,8 +1,7 @@
 ```mermaid
 sequenceDiagram
 participant MyAppWeb.FakeController
-participant MyApp.Utils
-MyAppWeb.FakeController->>params: params
-params->>MyApp.Utils: process
-MyApp.Utils->>result: result
+participant MyApp.Accounts
+MyAppWeb.FakeController->>MyApp.Accounts: normalize
+MyApp.Accounts->>MyApp.Accounts: create_user
 ```
