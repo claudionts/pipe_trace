@@ -7,7 +7,7 @@ defmodule PipeTrace.TraceTest do
       {module_name, calls} = Trace.from_source_file("test/fixtures/fake_controller.ex", :create)
       
       assert module_name == "MyAppWeb.FakeController"
-      assert calls == ["MyApp.Accounts.:normalize", "MyApp.Accounts.:create_user"]
+      assert calls == ["MyApp.Accounts.normalize", "MyApp.Accounts.create_user"]
     end
 
     test "returns empty list for non-existent function" do
@@ -45,7 +45,7 @@ defmodule PipeTrace.TraceTest do
       {module_name, calls} = Trace.from_source_file(temp_file, :simple_function)
       
       assert module_name == "NoCalls"
-      assert calls == [":ok"]
+      assert calls == []
       
       # Clean up
       File.rm!(temp_file)
@@ -93,9 +93,9 @@ defmodule PipeTrace.TraceTest do
       {module_name, calls} = Trace.from_source_file(temp_file, :process_user)
       
       assert module_name == "ComplexPipes"
-      assert "MyApp.Users.:validate" in calls
-      assert "MyApp.Users.:normalize" in calls
-      assert "MyApp.Users.:save" in calls
+      assert "MyApp.Users.validate" in calls
+      assert "MyApp.Users.normalize" in calls
+      assert "MyApp.Users.save" in calls
       
       # Clean up
       File.rm!(temp_file)

@@ -8,7 +8,9 @@ sequenceDiagram
 participant MyAppWeb.FakeController
 participant MyApp.Accounts
 MyAppWeb.FakeController->>MyApp.Accounts: normalize
-MyApp.Accounts->>MyApp.Accounts: create_user
+MyApp.Accounts-->>MyAppWeb.FakeController: normalize response
+MyAppWeb.FakeController->>MyApp.Accounts: create_user
+MyApp.Accounts-->>MyAppWeb.FakeController: create_user response
 ```
 """
 
@@ -35,6 +37,7 @@ MyApp.Accounts->>MyApp.Accounts: create_user
       assert content =~ "participant MyAppWeb.FakeController"
       assert content =~ "participant MyApp.Utils"
       assert content =~ "MyAppWeb.FakeController->>MyApp.Utils: process"
+      assert content =~ "MyApp.Utils-->>MyAppWeb.FakeController: process response"
     end
 
     test "generates diagram with multiple different modules" do
@@ -56,8 +59,11 @@ MyApp.Accounts->>MyApp.Accounts: create_user
       assert content =~ "participant MyApp.Accounts"
       assert content =~ "participant MyApp.Notifications"
       assert content =~ "MyAppWeb.FakeController->>MyApp.Users: validate"
-      assert content =~ "MyApp.Users->>MyApp.Accounts: create"
-      assert content =~ "MyApp.Accounts->>MyApp.Notifications: send"
+      assert content =~ "MyApp.Users-->>MyAppWeb.FakeController: validate response"
+      assert content =~ "MyAppWeb.FakeController->>MyApp.Accounts: create"
+      assert content =~ "MyApp.Accounts-->>MyAppWeb.FakeController: create response"
+      assert content =~ "MyAppWeb.FakeController->>MyApp.Notifications: send"
+      assert content =~ "MyApp.Notifications-->>MyAppWeb.FakeController: send response"
     end
 
     test "handles empty list of calls" do
@@ -88,7 +94,9 @@ MyApp.Accounts->>MyApp.Accounts: create_user
       assert content =~ "participant MyAppWeb.FakeController"
       assert content =~ "participant MyApp.Accounts"
       assert content =~ "MyAppWeb.FakeController->>MyApp.Accounts: normalize"
-      assert content =~ "MyApp.Accounts->>MyApp.Accounts: create_user"
+      assert content =~ "MyApp.Accounts-->>MyAppWeb.FakeController: normalize response"
+      assert content =~ "MyAppWeb.FakeController->>MyApp.Accounts: create_user"
+      assert content =~ "MyApp.Accounts-->>MyAppWeb.FakeController: create_user response"
     end
 
     test "filters out non-module participants" do
@@ -118,7 +126,9 @@ MyApp.Accounts->>MyApp.Accounts: create_user
       content = File.read!("sequence_diagram.md")
       
       assert content =~ "MyAppWeb.FakeController->>MyApp.Utils: process"
-      assert content =~ "MyApp.Utils->>MyApp.Utils: validate"
+      assert content =~ "MyApp.Utils-->>MyAppWeb.FakeController: process response"
+      assert content =~ "MyAppWeb.FakeController->>MyApp.Utils: validate"
+      assert content =~ "MyApp.Utils-->>MyAppWeb.FakeController: validate response"
     end
 
     test "creates proper Mermaid syntax" do

@@ -56,51 +56,123 @@ defmodule PipeTrace.Mermaid do
   end
 
   @doc false
-  @spec build_participants([String.t()], String.t()) :: [String.t()]
-  defp build_participants(calls, module_name) do
-    # Add the controller as the first participant dynamically
-    participants = [module_name] ++ 
-      (calls
-       |> Enum.map(&participant_from/1)
-       |> Enum.filter(&is_module?/1)
+  @spec build_participants([{String.t(), {String.t(), String.t()}}], String.t()) :: [String.t()]
+  defp build_participants(call_pairs, module_name) do
+    participants =
+      [module_name] ++
+      (call_pairs
+       |> Enum.flat_map(fn {caller, {callee, _function}} -> [caller, callee] end)
        |> Enum.uniq())
-    
-    participants
-    |> Enum.map(&"participant #{&1}")
+    Enum.map(participants, &"participant #{&1}")
   end
 
-  defp build_messages([], _module_name), do: []
+  @doc false
+  @spec build_messages([{String.t(), {String.t(), String.t()}}], String.t()) :: [String.t()]
+  defp build_messages(call_pairs, _module_name) do
+    Enum.flat_map(call_pairs, fn {caller, {callee, function}} ->
+      [
+        "#{caller}->>#{callee}: #{function}",
+        "#{callee}-->>#{caller}: #{function} response"
+      ]
+    end)
+  end
 
   @doc false
-  @spec build_messages([String.t()], String.t()) :: [String.t()]
-  defp build_messages(calls, module_name) when length(calls) >= 1 do
-    # Start with controller calling the first function
+  @spec separate_direct_and_nested_calls([String.t()]) :: {[String.t()], [String.t()]}
+  defp separate_direct_and_nested_calls(calls) do
+    # This is a simplified approach - in a real implementation,
+    # we would need to understand the call hierarchy from the AST
+    # For now, let's assume the first call to each module is direct,
+    # and subsequent calls to the same module are nested
+    
+    module_calls = Enum.group_by(calls, &participant_from/1)
+    
+    direct_calls = module_calls
+    |> Enum.map(fn {_module, calls} -> List.first(calls) end)
+    
+    nested_calls = calls -- direct_calls
+    
+    {direct_calls, nested_calls}
+  end
+
+  @doc false
+  @spec build_direct_call_messages(String.t(), [String.t()]) :: [String.t()]
+  defp build_direct_call_messages(controller, calls) do
+    Enum.flat_map(calls, fn call ->
+      [
+        "#{controller}->>#{participant_from(call)}: #{extract_function_name(call)}",
+        "#{participant_from(call)}-->>#{controller}: #{extract_function_name(call)} response"
+      ]
+    end)
+  end
+
+  @doc false
+  @spec build_nested_call_messages([String.t()]) :: [String.t()]
+  defp build_nested_call_messages([]), do: []
+
+  @doc false
+  @spec build_nested_call_messages([String.t()]) :: [String.t()]
+  defp build_nested_call_messages(calls) do
+    # For nested calls, we need to understand which function calls which
+    # This is a simplified implementation
+    # In a real implementation, we would need to analyze the call hierarchy
+    
+    # For now, let's assume calls are in sequence
+    build_sequential_nested_calls(calls)
+  end
+
+  @doc false
+  @spec build_sequential_nested_calls([String.t()]) :: [String.t()]
+  defp build_sequential_nested_calls([]), do: []
+
+  defp build_sequential_nested_calls([_]), do: []
+
+  defp build_sequential_nested_calls([from, to | rest]) do
+    [
+      "#{participant_from(from)}->>#{participant_from(to)}: #{extract_function_name(to)}",
+      "#{participant_from(to)}-->>#{participant_from(from)}: #{extract_function_name(to)} response"
+    ] ++ build_sequential_nested_calls([to | rest])
+  end
+
+  @doc false
+  @spec group_calls_by_module([String.t()]) :: [{String.t(), [String.t()]}]
+  defp group_calls_by_module(calls) do
+    calls
+    |> Enum.group_by(&participant_from/1)
+    |> Enum.map(fn {module, calls} -> {module, calls} end)
+  end
+
+  @doc false
+  @spec build_module_messages(String.t(), String.t(), [String.t()]) :: [String.t()]
+  defp build_module_messages(controller, module, calls) do
+    # Controller calls the first function in this module
     first_call = List.first(calls)
-    first_message = ["#{module_name}->>#{participant_from(first_call)}: #{extract_function_name(first_call)}"]
+    first_message = ["#{controller}->>#{module}: #{extract_function_name(first_call)}"]
     
-    # Then add messages between subsequent calls
-    if length(calls) >= 2 do
-      rest_messages = build_messages_between_calls(calls)
-      first_message ++ rest_messages
-    else
-      first_message
-    end
+    # Add response from this module back to controller
+    first_response = ["#{module}-->>#{controller}: #{extract_function_name(first_call)} response"]
+    
+    first_message ++ first_response
   end
 
   @doc false
-  @spec build_messages_between_calls([String.t()]) :: [String.t()]
-  defp build_messages_between_calls([_]), do: []
+  @spec build_chain_messages([String.t()]) :: [String.t()]
+  defp build_chain_messages([_first]), do: []
 
   @doc false
-  @spec build_messages_between_calls([String.t()]) :: [String.t()]
-  defp build_messages_between_calls([from, to | rest]) do
-    ["#{participant_from(from)}->>#{participant_from(to)}: #{extract_function_name(to)}"] ++
-      build_messages_between_calls([to | rest])
+  @spec build_chain_messages([String.t()]) :: [String.t()]
+  defp build_chain_messages([from, to | rest]) do
+    # Add call from one function to another
+    call_message = ["#{participant_from(from)}->>#{participant_from(to)}: #{extract_function_name(to)}"]
+    
+    # Add response from the called function back to the caller
+    response_message = ["#{participant_from(to)}-->>#{participant_from(from)}: #{extract_function_name(to)} response"]
+    
+    # Continue building the chain
+    chain_rest = build_chain_messages([to | rest])
+    
+    call_message ++ response_message ++ chain_rest
   end
-
-  @doc false
-  @spec build_messages_between_calls([]) :: []
-  defp build_messages_between_calls([]), do: []
 
   @doc false
   @spec participant_from(String.t()) :: String.t()
