@@ -4,12 +4,13 @@ defmodule PipeTrace.Mermaid do
 
   This module takes a list of function calls extracted from Elixir code
   and generates a Mermaid sequence diagram showing the flow between
-  different modules and their function calls.
+  different modules and their function calls. The module name is extracted
+  dynamically from the source file, making it generic for any project.
 
   ## Examples
 
       iex> calls = ["MyApp.Accounts.normalize", "MyApp.Accounts.create_user"]
-      iex> PipeTrace.Mermaid.generate(calls)
+      iex> PipeTrace.Mermaid.generate(calls, "MyAppWeb.UserController")
       ✅ Diagram saved in sequence_diagram.md
       :ok
 
@@ -27,6 +28,7 @@ defmodule PipeTrace.Mermaid do
   ## Parameters
 
     - `calls` - A list of function call strings (e.g., `["MyApp.Accounts.normalize", "MyApp.Accounts.create_user"]`)
+    - `module_name` - The name of the module being analyzed (e.g., `"MyAppWeb.UserController"`)
 
   ## Returns
 
@@ -34,17 +36,17 @@ defmodule PipeTrace.Mermaid do
 
   ## Examples
 
-      iex> PipeTrace.Mermaid.generate(["MyApp.Accounts.normalize", "MyApp.Accounts.create_user"])
+      iex> PipeTrace.Mermaid.generate(["MyApp.Accounts.normalize", "MyApp.Accounts.create_user"], "MyAppWeb.UserController")
       ✅ Diagram saved in sequence_diagram.md
       :ok
 
   """
-  @spec generate([String.t()]) :: :ok
-  def generate(calls) do
+  @spec generate([String.t()], String.t()) :: :ok
+  def generate(calls, module_name) do
     diagram =
       ["```mermaid", "sequenceDiagram"] ++
-        build_participants(calls) ++
-        build_messages(calls) ++
+        build_participants(calls, module_name) ++
+        build_messages(calls, module_name) ++
         ["```", ""]
 
     markdown = Enum.join(diagram, "\n")
@@ -54,10 +56,10 @@ defmodule PipeTrace.Mermaid do
   end
 
   @doc false
-  @spec build_participants([String.t()]) :: [String.t()]
-  defp build_participants(calls) do
-    # Add the controller as the first participant
-    participants = ["MyAppWeb.FakeController"] ++ 
+  @spec build_participants([String.t()], String.t()) :: [String.t()]
+  defp build_participants(calls, module_name) do
+    # Add the controller as the first participant dynamically
+    participants = [module_name] ++ 
       (calls
        |> Enum.map(&participant_from/1)
        |> Enum.filter(&is_module?/1)
@@ -67,14 +69,14 @@ defmodule PipeTrace.Mermaid do
     |> Enum.map(&"participant #{&1}")
   end
 
-  defp build_messages([]), do: []
+  defp build_messages([], _module_name), do: []
 
   @doc false
-  @spec build_messages([String.t()]) :: [String.t()]
-  defp build_messages(calls) when length(calls) >= 1 do
+  @spec build_messages([String.t()], String.t()) :: [String.t()]
+  defp build_messages(calls, module_name) when length(calls) >= 1 do
     # Start with controller calling the first function
     first_call = List.first(calls)
-    first_message = ["MyAppWeb.FakeController->>#{participant_from(first_call)}: #{extract_function_name(first_call)}"]
+    first_message = ["#{module_name}->>#{participant_from(first_call)}: #{extract_function_name(first_call)}"]
     
     # Then add messages between subsequent calls
     if length(calls) >= 2 do

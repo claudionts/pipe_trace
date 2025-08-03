@@ -4,14 +4,16 @@ defmodule PipeTrace.TraceTest do
 
   describe "from_source_file/2" do
     test "extracts function calls from a simple controller with pipe operators" do
-      calls = Trace.from_source_file("test/fixtures/fake_controller.ex", :create)
+      {module_name, calls} = Trace.from_source_file("test/fixtures/fake_controller.ex", :create)
       
+      assert module_name == "MyAppWeb.FakeController"
       assert calls == ["MyApp.Accounts.:normalize", "MyApp.Accounts.:create_user"]
     end
 
     test "returns empty list for non-existent function" do
-      calls = Trace.from_source_file("test/fixtures/fake_controller.ex", :non_existent)
+      {module_name, calls} = Trace.from_source_file("test/fixtures/fake_controller.ex", :non_existent)
       
+      assert module_name == "MyAppWeb.FakeController"
       assert calls == []
     end
 
@@ -20,8 +22,9 @@ defmodule PipeTrace.TraceTest do
       temp_file = "test/fixtures/empty_file.ex"
       File.write!(temp_file, "defmodule EmptyModule do\nend")
       
-      calls = Trace.from_source_file(temp_file, :some_function)
+      {module_name, calls} = Trace.from_source_file(temp_file, :some_function)
       
+      assert module_name == "EmptyModule"
       assert calls == []
       
       # Clean up
@@ -39,8 +42,9 @@ defmodule PipeTrace.TraceTest do
       end
       """)
       
-      calls = Trace.from_source_file(temp_file, :simple_function)
+      {module_name, calls} = Trace.from_source_file(temp_file, :simple_function)
       
+      assert module_name == "NoCalls"
       assert calls == [":ok"]
       
       # Clean up
@@ -59,8 +63,9 @@ defmodule PipeTrace.TraceTest do
       end
       """)
       
-      calls = Trace.from_source_file(temp_file, :process_data)
+      {module_name, calls} = Trace.from_source_file(temp_file, :process_data)
       
+      assert module_name == "DirectCalls"
       # The calls are combined into a single string with newlines
       assert length(calls) == 1
       call_string = List.first(calls)
@@ -85,8 +90,9 @@ defmodule PipeTrace.TraceTest do
       end
       """)
       
-      calls = Trace.from_source_file(temp_file, :process_user)
+      {module_name, calls} = Trace.from_source_file(temp_file, :process_user)
       
+      assert module_name == "ComplexPipes"
       assert "MyApp.Users.:validate" in calls
       assert "MyApp.Users.:normalize" in calls
       assert "MyApp.Users.:save" in calls

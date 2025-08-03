@@ -62,7 +62,7 @@ defmodule PipeTraceTest do
       assert File.exists?("sequence_diagram.md")
       
       content = File.read!("sequence_diagram.md")
-      assert content =~ "participant MyAppWeb.FakeController"
+      assert content =~ "participant ComplexController"
       assert content =~ "participant MyApp.Orders"
       assert content =~ "participant MyApp.Payments"
       assert content =~ "participant MyApp.Notifications"
@@ -73,6 +73,21 @@ defmodule PipeTraceTest do
       
       # Clean up
       File.rm!(temp_file)
+    end
+
+    test "generates diagram with different module names" do
+      File.rm("sequence_diagram.md")
+      
+      result = PipeTrace.generate_diagram("test/fixtures/custom_controller.ex", :create)
+      
+      assert result == :ok
+      assert File.exists?("sequence_diagram.md")
+      
+      content = File.read!("sequence_diagram.md")
+      assert content =~ "participant CustomApp.Web.UserController"
+      assert content =~ "participant CustomApp.Accounts"
+      assert content =~ "validate"
+      assert content =~ "create"
     end
   end
 end

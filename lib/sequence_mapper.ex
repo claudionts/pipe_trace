@@ -42,8 +42,7 @@ defmodule PipeTrace do
   """
   @spec generate_diagram(String.t(), atom()) :: :ok
   def generate_diagram(controller_module, action) do
-    controller_module
-    |> Trace.from_source_file(action)
-    |> Mermaid.generate()
+    {module_name, calls} = Trace.from_source_file(controller_module, action)
+    Mermaid.generate(calls, module_name)
   end
 end

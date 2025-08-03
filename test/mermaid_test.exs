@@ -12,12 +12,12 @@ MyApp.Accounts->>MyApp.Accounts: create_user
 ```
 """
 
-  describe "generate/1" do
+  describe "generate/2" do
     test "creates a correct Mermaid sequence diagram from AST" do
       File.rm("sequence_diagram.md")
 
-      PipeTrace.Trace.from_source_file("test/fixtures/fake_controller.ex", :create)
-      |> Mermaid.generate()
+      {module_name, calls} = PipeTrace.Trace.from_source_file("test/fixtures/fake_controller.ex", :create)
+      Mermaid.generate(calls, module_name)
 
       assert File.exists?("sequence_diagram.md")
       content = File.read!("sequence_diagram.md")
@@ -27,7 +27,7 @@ MyApp.Accounts->>MyApp.Accounts: create_user
     test "generates diagram with single function call" do
       File.rm("sequence_diagram.md")
       
-      Mermaid.generate(["MyApp.Utils.process"])
+      Mermaid.generate(["MyApp.Utils.process"], "MyAppWeb.FakeController")
       
       assert File.exists?("sequence_diagram.md")
       content = File.read!("sequence_diagram.md")
@@ -46,7 +46,7 @@ MyApp.Accounts->>MyApp.Accounts: create_user
         "MyApp.Notifications.send"
       ]
       
-      Mermaid.generate(calls)
+      Mermaid.generate(calls, "MyAppWeb.FakeController")
       
       assert File.exists?("sequence_diagram.md")
       content = File.read!("sequence_diagram.md")
@@ -63,7 +63,7 @@ MyApp.Accounts->>MyApp.Accounts: create_user
     test "handles empty list of calls" do
       File.rm("sequence_diagram.md")
       
-      Mermaid.generate([])
+      Mermaid.generate([], "MyAppWeb.FakeController")
       
       assert File.exists?("sequence_diagram.md")
       content = File.read!("sequence_diagram.md")
@@ -80,7 +80,7 @@ MyApp.Accounts->>MyApp.Accounts: create_user
       
       calls = ["params |> MyApp.Accounts.normalize", "MyApp.Accounts.create_user"]
       
-      Mermaid.generate(calls)
+      Mermaid.generate(calls, "MyAppWeb.FakeController")
       
       assert File.exists?("sequence_diagram.md")
       content = File.read!("sequence_diagram.md")
@@ -96,7 +96,7 @@ MyApp.Accounts->>MyApp.Accounts: create_user
       
       calls = ["params", "MyApp.Utils.process", "result"]
       
-      Mermaid.generate(calls)
+      Mermaid.generate(calls, "MyAppWeb.FakeController")
       
       assert File.exists?("sequence_diagram.md")
       content = File.read!("sequence_diagram.md")
@@ -112,7 +112,7 @@ MyApp.Accounts->>MyApp.Accounts: create_user
       
       calls = ["MyApp.Utils.:process", "MyApp.Utils.:validate"]
       
-      Mermaid.generate(calls)
+      Mermaid.generate(calls, "MyAppWeb.FakeController")
       
       assert File.exists?("sequence_diagram.md")
       content = File.read!("sequence_diagram.md")
@@ -124,7 +124,7 @@ MyApp.Accounts->>MyApp.Accounts: create_user
     test "creates proper Mermaid syntax" do
       File.rm("sequence_diagram.md")
       
-      Mermaid.generate(["MyApp.Utils.process"])
+      Mermaid.generate(["MyApp.Utils.process"], "MyAppWeb.FakeController")
       
       content = File.read!("sequence_diagram.md")
       

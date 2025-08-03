@@ -39,16 +39,32 @@ defmodule PipeTrace.Trace do
       ["MyApp.Accounts.normalize", "MyApp.Accounts.create_user"]
 
   """
-  @spec from_source_file(String.t(), atom()) :: [String.t()]
+  @spec from_source_file(String.t(), atom()) :: {String.t(), [String.t()]}
   def from_source_file(path, action) do
     case File.read(path) do
       {:ok, source} ->
         {:ok, ast} = Code.string_to_quoted(source)
-        find_function_calls(ast, action)
+        module_name = extract_module_name(ast)
+        calls = find_function_calls(ast, action)
+        {module_name, calls}
       
       {:error, _reason} ->
-        []
+        {"UnknownModule", []}
     end
+  end
+
+  @doc false
+  @spec extract_module_name(Macro.t()) :: String.t()
+  defp extract_module_name(ast) do
+    Macro.prewalk(ast, "UnknownModule", fn
+      {:defmodule, _, [{:__aliases__, _, module_parts}, [do: _]]} = node, _ ->
+        module_name = Enum.join(module_parts, ".")
+        {node, module_name}
+
+      node, acc ->
+        {node, acc}
+    end)
+    |> elem(1)
   end
 
   @doc false
